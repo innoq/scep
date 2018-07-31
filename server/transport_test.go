@@ -17,9 +17,9 @@ import (
 
 	kitlog "github.com/go-kit/kit/log"
 
-	"github.com/micromdm/scep/depot"
-	filedepot "github.com/micromdm/scep/depot/file"
-	scepserver "github.com/micromdm/scep/server"
+	"github.com/innoq/scep/depot"
+	filedepot "github.com/innoq/scep/depot/file"
+	"github.com/innoq/scep/server"
 )
 
 func TestCACaps(t *testing.T) {
@@ -150,7 +150,7 @@ func newCSR(priv *rsa.PrivateKey, email, country, cname string) ([]byte, error) 
 	subj := pkix.Name{
 		Country:    []string{country},
 		CommonName: cname,
-		ExtraNames: []pkix.AttributeTypeAndValue{pkix.AttributeTypeAndValue{
+		ExtraNames: []pkix.AttributeTypeAndValue{{
 			Type:  []int{1, 2, 840, 113549, 1, 9, 1},
 			Value: email,
 		}},

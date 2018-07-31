@@ -10,13 +10,21 @@
 [[projects]]
   branch = "sha256"
   name = "github.com/fullsailor/pkcs7"
-  packages = [".","internal/x509util"]
+  packages = [
+    ".",
+    "internal/x509util"
+  ]
   revision = "43549d8ee32d0e4f67d7536b6356db5ba49a6378"
-  source = "git@github.com:groob/pkcs7"
+  source = "github.com/groob/pkcs7"
 
 [[projects]]
   name = "github.com/go-kit/kit"
-  packages = ["endpoint","log","transport/http"]
+  packages = [
+    "endpoint",
+    "log",
+    "log/level",
+    "transport/http"
+  ]
   revision = "fadad6fffe0466b19df9efd9acde5c9a52df5fa4"
   version = "v0.4.0"
 
@@ -47,7 +55,10 @@
 [[projects]]
   branch = "master"
   name = "github.com/groob/finalizer"
-  packages = [".","logutil"]
+  packages = [
+    ".",
+    "logutil"
+  ]
   revision = "4c2ed49aabdaa038f247d72d183e410757cdbe9c"
 
 [[projects]]
@@ -65,7 +76,10 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","context/ctxhttp"]
+  packages = [
+    "context",
+    "context/ctxhttp"
+  ]
   revision = "f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f"
 
 [[projects]]
@@ -77,6 +91,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4bf6820df828baf8cac19af2b49ad79e752d4c4b9437fbfa91e5ffc9efca25ef"
+  inputs-digest = "ca9e773906851e3fedb7dda45f4631ffabe76a8d855dd52341f5522786450e93"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -12,10 +12,11 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
-	"github.com/micromdm/scep/challenge"
-	"github.com/micromdm/scep/csrverifier"
-	"github.com/micromdm/scep/depot"
-	"github.com/micromdm/scep/scep"
+	"github.com/innoq/scep/challenge"
+	"github.com/innoq/scep/cmsverifier"
+	"github.com/innoq/scep/csrverifier"
+	"github.com/innoq/scep/depot"
+	"github.com/innoq/scep/scep"
 )
 
 // Service is the interface for all supported SCEP server operations.
@@ -49,6 +50,7 @@ type service struct {
 	supportDynamciChallenge bool
 	dynamicChallengeStore   challenge.Store
 	csrVerifier             csrverifier.CSRVerifier
+	cmsVerifier             cmsverifier.CMSVerifier
 	allowRenewal            int // days before expiry, 0 to disable
 	clientValidity          int // client cert validity in days
 
@@ -93,25 +95,33 @@ func (svc *service) PKIOperation(ctx context.Context, data []byte) ([]byte, erro
 
 	// validate challenge passwords
 	if msg.MessageType == scep.PKCSReq {
-		CSRIsValid := false
-
-		if svc.csrVerifier != nil {
+		messageIsValid := false
+		if svc.cmsVerifier != nil {
+			result, err := svc.cmsVerifier.Verify(msg.Raw)
+			if err != nil {
+				return nil, err
+			}
+			messageIsValid = result
+			if !messageIsValid {
+				svc.debugLogger.Log("err", "CMS is not valid")
+			}
+		} else if svc.csrVerifier != nil {
 			result, err := svc.csrVerifier.Verify(msg.CSRReqMessage.RawDecrypted)
 			if err != nil {
 				return nil, err
 			}
-			CSRIsValid = result
-			if !CSRIsValid {
+			messageIsValid = result
+			if !messageIsValid {
 				svc.debugLogger.Log("err", "CSR is not valid")
 			}
 		} else {
-			CSRIsValid = svc.challengePasswordMatch(msg.CSRReqMessage.ChallengePassword)
-			if !CSRIsValid {
+			messageIsValid = svc.challengePasswordMatch(msg.CSRReqMessage.ChallengePassword)
+			if !messageIsValid {
 				svc.debugLogger.Log("err", "scep challenge password does not match")
 			}
 		}
 
-		if !CSRIsValid {
+		if !messageIsValid {
 			certRep, err := msg.Fail(ca, svc.caKey, scep.BadRequest)
 			if err != nil {
 				return nil, err
@@ -210,6 +220,15 @@ type ServiceOption func(*service) error
 func WithCSRVerifier(csrVerifier csrverifier.CSRVerifier) ServiceOption {
 	return func(s *service) error {
 		s.csrVerifier = csrVerifier
+		return nil
+	}
+}
+
+// WithCMSVerifier is an option argument to NewService
+// which allows setting a CMS verifier.
+func WithCMSVerifier(cmsVerifier cmsverifier.CMSVerifier) ServiceOption {
+	return func(s *service) error {
+		s.cmsVerifier = cmsVerifier
 		return nil
 	}
 }

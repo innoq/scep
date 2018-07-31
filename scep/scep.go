@@ -19,7 +19,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
 
-	"github.com/micromdm/scep/crypto/x509util"
+	"github.com/innoq/scep/crypto/x509util"
 )
 
 // errors
@@ -363,23 +363,23 @@ func (msg *PKIMessage) DecryptPKIEnvelope(cert *x509.Certificate, key *rsa.Priva
 func (msg *PKIMessage) Fail(crtAuth *x509.Certificate, keyAuth *rsa.PrivateKey, info FailInfo) (*PKIMessage, error) {
 	config := pkcs7.SignerInfoConfig{
 		ExtraSignedAttributes: []pkcs7.Attribute{
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPtransactionID,
 				Value: msg.TransactionID,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPpkiStatus,
 				Value: FAILURE,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPfailInfo,
 				Value: info,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPmessageType,
 				Value: CertRep,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPrecipientNonce,
 				Value: msg.SenderNonce,
 			},
@@ -454,19 +454,19 @@ func (msg *PKIMessage) SignCSR(crtAuth *x509.Certificate, keyAuth *rsa.PrivateKe
 	// PKIMessageAttributes to be signed
 	config := pkcs7.SignerInfoConfig{
 		ExtraSignedAttributes: []pkcs7.Attribute{
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPtransactionID,
 				Value: msg.TransactionID,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPpkiStatus,
 				Value: SUCCESS,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPmessageType,
 				Value: CertRep,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPrecipientNonce,
 				Value: msg.SenderNonce,
 			},
@@ -570,15 +570,15 @@ func NewCSRRequest(csr *x509.CertificateRequest, tmpl *PKIMessage, opts ...Optio
 	// PKIMessageAttributes to be signed
 	config := pkcs7.SignerInfoConfig{
 		ExtraSignedAttributes: []pkcs7.Attribute{
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPtransactionID,
 				Value: tID,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPmessageType,
 				Value: tmpl.MessageType,
 			},
-			pkcs7.Attribute{
+			{
 				Type:  oidSCEPsenderNonce,
 				Value: sn,
 			},

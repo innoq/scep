@@ -8,7 +8,7 @@ To compile the SCEP client and server, there are a few requirements.
 * You must have a Go compiler. The compiler is normally in the `golang` package.
 * You must have a shell variable set for $GOPATH. This is a directory used by the Go compiler and utilities for all Go projects.
 
-1. Once all of those are set, clone the repository with `go get github.com/micromdm/scep`
+1. Once all of those are set, clone the repository with `go get github.com/innoq/scep`
 2. Install dependencies:
     `make deps`
 3. Compile the server and client binaries: 
@@ -130,22 +130,22 @@ This most likely uses the `/certsrv/mscep` path instead. You will need to add th
 
 # Docker
 ```
-docker build -t micromdm/scep:latest .
+docker build -t innoq/scep:latest .
 
 # create CA
-docker run -it --rm -v /path/to/ca/folder:/depot micromdm/scep:latest ca -init
+docker run -it --rm -v /path/to/ca/folder:/depot innoq/scep:latest ca -init
 
 # run
-docker run -it --rm -v /path/to/ca/folder:/depot -p 8080:8080 micromdm/scep:latest
+docker run -it --rm -v /path/to/ca/folder:/depot -p 8080:8080 innoq/scep:latest
 ```
 
 # SCEP library
 
 ```
-go get github.com/micromdm/scep/scep
+go get github.com/innoq/scep/scep
 ```
 
-For detailed usage, see [godoc](https://godoc.org/github.com/micromdm/scep/scep) 
+For detailed usage, see [godoc](https://godoc.org/github.com/innoq/scep/scep) 
 
 Example:
 ```

@@ -43,7 +43,7 @@ func NewBoltDepot(db *bolt.DB) (*Depot, error) {
 }
 
 func (db *Depot) CA(pass []byte) ([]*x509.Certificate, *rsa.PrivateKey, error) {
-	chain := []*x509.Certificate{}
+	var chain []*x509.Certificate
 	var key *rsa.PrivateKey
 	err := db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(certBucket))
@@ -178,7 +178,7 @@ func (db *Depot) HasCN(cn string, allowTime int, cert *x509.Certificate, revokeO
 	}
 	var hasCN bool
 	err := db.View(func(tx *bolt.Tx) error {
-		// TODO: "scep_certificates" is internal const in micromdm/scep
+		// TODO: "scep_certificates" is internal const in innoq/scep
 		curs := tx.Bucket([]byte("scep_certificates")).Cursor()
 		prefix := []byte(cert.Subject.CommonName)
 		for k, v := curs.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = curs.Next() {
@@ -260,7 +260,7 @@ func (db *Depot) CreateOrLoadCA(key *rsa.PrivateKey, years int, org, country str
 	subject := pkix.Name{
 		Country:            []string{country},
 		Organization:       []string{org},
-		OrganizationalUnit: []string{"MICROMDM SCEP CA"},
+		OrganizationalUnit: []string{"innoq SCEP CA"},
 		Locality:           nil,
 		Province:           nil,
 		StreetAddress:      nil,

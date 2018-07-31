@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
-	challengestore "github.com/micromdm/scep/challenge/bolt"
-	boltdepot "github.com/micromdm/scep/depot/bolt"
-	"github.com/micromdm/scep/scep"
+	"github.com/innoq/scep/challenge/bolt"
+	boltdepot "github.com/innoq/scep/depot/bolt"
+	"github.com/innoq/scep/scep"
 )
 
 func TestDynamicChallenge(t *testing.T) {
@@ -27,7 +27,7 @@ func TestDynamicChallenge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = depot.CreateOrLoadCA(key, 5, "MicroMDM", "US")
+	_, err = depot.CreateOrLoadCA(key, 5, "innoq", "US")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestCaCert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	caCert, err := depot.CreateOrLoadCA(key, 5, "MicroMDM", "US")
+	caCert, err := depot.CreateOrLoadCA(key, 5, "innoq", "US")
 	if err != nil {
 		t.Fatal(err)
 	}
