@@ -36,6 +36,7 @@ type runCfg struct {
 	selfSignPath string
 	certPath     string
 	cn           string
+	subjectKeyId string
 	org          string
 	ou           string
 	locality     string
@@ -104,7 +105,7 @@ func run(cfg runCfg) error {
 		if !os.IsNotExist(err) {
 			return err
 		}
-		s, err := loadOrSign(cfg.selfSignPath, key, csr)
+		s, err := loadOrSign(cfg.selfSignPath, key, csr, cfg.subjectKeyId)
 		if err != nil {
 			return err
 		}
@@ -273,6 +274,7 @@ func main() {
 		flKeySize           = flag.Int("keySize", 2048, "rsa key size")
 		flOrg               = flag.String("organization", "scep-client", "organization for cert")
 		flCName             = flag.String("cn", "scepclient", "common name for certificate")
+		flSubjectKeyId      = flag.String("subjectKeyId", "68836058710008fd", "subjectKeyId for the cms certificate")
 		flOU                = flag.String("ou", "MDM", "organizational unit for certificate")
 		flLoc               = flag.String("locality", "", "locality for certificate")
 		flProvince          = flag.String("province", "", "province for certificate")
@@ -318,6 +320,7 @@ func main() {
 		selfSignPath: selfSignPath,
 		certPath:     *flCertPath,
 		cn:           *flCName,
+		subjectKeyId: *flSubjectKeyId,
 		org:          *flOrg,
 		country:      *flCountry,
 		locality:     *flLoc,

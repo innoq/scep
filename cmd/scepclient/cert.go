@@ -28,7 +28,7 @@ func pemCert(derBytes []byte) []byte {
 	return out
 }
 
-func loadOrSign(path string, priv *rsa.PrivateKey, csr *x509.CertificateRequest) (*x509.Certificate, error) {
+func loadOrSign(path string, priv *rsa.PrivateKey, csr *x509.CertificateRequest, subjectKeyId string) (*x509.Certificate, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		if os.IsExist(err) {
@@ -37,7 +37,7 @@ func loadOrSign(path string, priv *rsa.PrivateKey, csr *x509.CertificateRequest)
 		return nil, err
 	}
 	defer file.Close()
-	self, err := selfSign(priv, csr)
+	self, err := selfSign(priv, csr, subjectKeyId)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func loadOrSign(path string, priv *rsa.PrivateKey, csr *x509.CertificateRequest)
 	return self, nil
 }
 
-func selfSign(priv *rsa.PrivateKey, csr *x509.CertificateRequest) (*x509.Certificate, error) {
+func selfSign(priv *rsa.PrivateKey, csr *x509.CertificateRequest, subjectKeyId string) (*x509.Certificate, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
@@ -67,8 +67,9 @@ func selfSign(priv *rsa.PrivateKey, csr *x509.CertificateRequest) (*x509.Certifi
 			CommonName:   "SCEP SIGNER",
 			Organization: csr.Subject.Organization,
 		},
-		NotBefore: notBefore,
-		NotAfter:  notAfter,
+		SubjectKeyId: []byte(subjectKeyId),
+		NotBefore:    notBefore,
+		NotAfter:     notAfter,
 
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
