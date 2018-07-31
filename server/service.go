@@ -93,7 +93,7 @@ func (svc *service) PKIOperation(ctx context.Context, data []byte) ([]byte, erro
 		return nil, err
 	}
 
-	// validate challenge passwords
+	// validate challenge passwords and signature
 	if msg.MessageType == scep.PKCSReq {
 		messageIsValid := false
 		if svc.cmsVerifier != nil {
@@ -105,28 +105,43 @@ func (svc *service) PKIOperation(ctx context.Context, data []byte) ([]byte, erro
 			if !messageIsValid {
 				svc.debugLogger.Log("err", "CMS is not valid")
 			}
-		} else if svc.csrVerifier != nil {
-			result, err := svc.csrVerifier.Verify(msg.CSRReqMessage.RawDecrypted)
-			if err != nil {
-				return nil, err
-			}
-			messageIsValid = result
-			if !messageIsValid {
-				svc.debugLogger.Log("err", "CSR is not valid")
-			}
 		} else {
-			messageIsValid = svc.challengePasswordMatch(msg.CSRReqMessage.ChallengePassword)
-			if !messageIsValid {
-				svc.debugLogger.Log("err", "scep challenge password does not match")
-			}
+			messageIsValid = true
 		}
 
-		if !messageIsValid {
+		if messageIsValid {
+			CSRIsValid := false
+			if svc.csrVerifier != nil {
+				result, err := svc.csrVerifier.Verify(msg.CSRReqMessage.RawDecrypted)
+				if err != nil {
+					return nil, err
+				}
+				messageIsValid = result
+				if !messageIsValid {
+					svc.debugLogger.Log("err", "CSR is not valid")
+				}
+			} else {
+				messageIsValid = svc.challengePasswordMatch(msg.CSRReqMessage.ChallengePassword)
+				if !messageIsValid {
+					svc.debugLogger.Log("err", "scep challenge password does not match")
+				}
+			}
+
+			if !CSRIsValid {
+				certRep, err := msg.Fail(ca, svc.caKey, scep.BadRequest)
+				if err != nil {
+					return nil, err
+				}
+				return certRep.Raw, nil
+			}
+
+		} else {
 			certRep, err := msg.Fail(ca, svc.caKey, scep.BadRequest)
 			if err != nil {
 				return nil, err
 			}
 			return certRep.Raw, nil
+
 		}
 	}
 
