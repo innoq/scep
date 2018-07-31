@@ -116,13 +116,13 @@ func (svc *service) PKIOperation(ctx context.Context, data []byte) ([]byte, erro
 				if err != nil {
 					return nil, err
 				}
-				messageIsValid = result
-				if !messageIsValid {
+				CSRIsValid = result
+				if !CSRIsValid {
 					svc.debugLogger.Log("err", "CSR is not valid")
 				}
 			} else {
-				messageIsValid = svc.challengePasswordMatch(msg.CSRReqMessage.ChallengePassword)
-				if !messageIsValid {
+				CSRIsValid = svc.challengePasswordMatch(msg.CSRReqMessage.ChallengePassword)
+				if !CSRIsValid {
 					svc.debugLogger.Log("err", "scep challenge password does not match")
 				}
 			}
