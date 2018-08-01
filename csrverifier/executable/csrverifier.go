@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"bytes"
 	"github.com/go-kit/kit/log"
 )
 
@@ -46,6 +47,10 @@ type ExecutableCSRVerifier struct {
 
 func (v *ExecutableCSRVerifier) Verify(data []byte) (bool, error) {
 	cmd := exec.Command(v.executable)
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -60,6 +65,8 @@ func (v *ExecutableCSRVerifier) Verify(data []byte) (bool, error) {
 	err = cmd.Run()
 	if err != nil {
 		v.logger.Log("err", err)
+		v.logger.Log("err", out.String())
+		v.logger.Log("err", stderr.String())
 		// mask the executable error
 		return false, nil
 	}
