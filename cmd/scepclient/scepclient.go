@@ -274,7 +274,7 @@ func main() {
 		flKeySize           = flag.Int("keySize", 2048, "rsa key size")
 		flOrg               = flag.String("organization", "scep-client", "organization for cert")
 		flCName             = flag.String("cn", "scepclient", "common name for certificate")
-		flSubjectKeyId      = flag.String("subjectKeyId", "68836058710008fd", "subjectKeyId for the cms certificate")
+		flSubjectKeyId      = flag.String("subjectKeyId", "123456789abcdef", "subjectKeyId for the cms certificate")
 		flOU                = flag.String("ou", "MDM", "organizational unit for certificate")
 		flLoc               = flag.String("locality", "", "locality for certificate")
 		flProvince          = flag.String("province", "", "province for certificate")

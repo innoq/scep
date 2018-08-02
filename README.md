@@ -102,7 +102,7 @@ Usage of scepclient:
   -cn string
     	common name for certificate (default "scepclient")
   -subjectKeyId string
-    	sets the subjectKeyId of the certificate in the CMS message
+    	sets the subjectKeyId of the certificate in the CMS message (default "123456789abcdef")
   -country string
     	country code in certificate (default "US")
   -debug
