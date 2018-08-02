@@ -53,6 +53,8 @@ Usage of ./cmd/scepserver/scepserver:
     	enforce a challenge password
   -crtvalid string
     	validity for new client certificates in days (default "365")
+  -cmsverifierexec string
+    	will be passed the CMS/PKCS7 for verification the CMS signature
   -csrverifierexec string
     	will be passed the CSRs for verification
   -debug
@@ -99,6 +101,8 @@ Usage of scepclient:
     	enforce a challenge password
   -cn string
     	common name for certificate (default "scepclient")
+  -subjectKeyId string
+    	sets the subjectKeyId of the certificate in the CMS message
   -country string
     	country code in certificate (default "US")
   -debug
