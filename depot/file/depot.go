@@ -38,7 +38,7 @@ func (d *fileDepot) CA(pass []byte) ([]*x509.Certificate, *rsa.PrivateKey, error
 	if err != nil {
 		return nil, nil, err
 	}
-	cert, err := loadCert(caPEM.Data)
+	certs, err := loadCerts(caPEM.Data)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -50,7 +50,7 @@ func (d *fileDepot) CA(pass []byte) ([]*x509.Certificate, *rsa.PrivateKey, error
 	if err != nil {
 		return nil, nil, err
 	}
-	return []*x509.Certificate{cert}, key, nil
+	return certs, key, nil
 }
 
 // file permissions
@@ -379,16 +379,32 @@ func loadKey(data []byte, password []byte) (*rsa.PrivateKey, error) {
 }
 
 // load an encrypted private key from disk
-func loadCert(data []byte) (*x509.Certificate, error) {
-	pemBlock, _ := pem.Decode(data)
-	if pemBlock == nil {
-		return nil, errors.New("PEM decode failed")
-	}
-	if pemBlock.Type != certificatePEMBlockType {
-		return nil, errors.New("unmatched type or headers")
-	}
+func loadCerts(data []byte) ([]*x509.Certificate, error) {
+	certificates := []*x509.Certificate{}
+	last := data
+	for {
+		pemBlock, remainder := pem.Decode(last)
 
-	return x509.ParseCertificate(pemBlock.Bytes)
+		if pemBlock == nil {
+			return nil, errors.New("PEM decode failed")
+		}
+
+		if pemBlock.Type != certificatePEMBlockType {
+			return nil, errors.New("unmatched type or headers")
+		}
+
+		last = remainder
+		cert, err := x509.ParseCertificate(pemBlock.Bytes)
+		if err != nil {
+			return nil, err
+		}
+
+		certificates = append(certificates, cert)
+
+		if len(last) == 0 {
+			return certificates, nil
+		}
+	}
 }
 
 func pemCert(derBytes []byte) []byte {
