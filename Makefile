@@ -1,20 +1,34 @@
-.PHONY: build
+.PHONY: all
 
-all: build
+VERSION?="0.3.0.0"
+CI_REGISTRY_IMAGE?="scep"
 
-deps:
-	go get -u github.com/golang/dep/...
+OS ?= ${shell uname|tr 'A-Z' 'a-z'}
+
+BUILD_CMD=CGO_ENABLED=0 \
+	GOOS=${OS} \
+	go build -o $@ -ldflags "-X main.version=${VERSION} -X main.revision=${shell git rev-parse --short HEAD}" ./$<
+
+
+all: \
+	build/${OS}/scepserver \
+	build/${OS}/scepclient
+
+vendor:
+	which dep || go get -u github.com/golang/dep/cmd/dep
 	dep ensure -v
 
-.pre:
-	mkdir -p build
+build/${OS}/scepclient: cmd/scepclient vendor
+	${BUILD_CMD}
 
-build: build-scepclient build-scepserver
+build/${OS}/scepserver: cmd/scepserver vendor
+	${BUILD_CMD}
 
-build-scepclient: .pre
-	cd cmd/scepclient && ./release.sh
+clean:
+	rm -rf build vendor
 
-build-scepserver: .pre
-	cd cmd/scepserver && ./release.sh
+dockerbuild:
+	docker run -v ${CURDIR}:/go/src/project -w /go/src/project --rm golang make
 
-
+test: vendor
+	go test -v ./...
