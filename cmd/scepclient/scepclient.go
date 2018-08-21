@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fullsailor/pkcs7"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/innoq/scep/client"
@@ -164,17 +163,11 @@ func run(cfg runCfg) error {
 		recipients = r
 	}
 
-	var algo int
-	if client.Supports("AES") || client.Supports("SCEPStandard") {
-		algo = pkcs7.EncryptionAlgorithmAES128GCM
-	}
-
 	tmpl := &scep.PKIMessage{
 		MessageType:             msgType,
 		Recipients:              recipients,
 		SignerKey:               key,
 		SignerCert:              signerCert,
-		SCEPEncryptionAlgorithm: algo,
 	}
 
 	if cfg.challenge != "" && msgType == scep.PKCSReq {

@@ -8,14 +8,10 @@
   version = "v1.3.1"
 
 [[projects]]
-  branch = "sha256"
+  branch = "master"
   name = "github.com/fullsailor/pkcs7"
-  packages = [
-    ".",
-    "internal/x509util"
-  ]
-  revision = "9cd374b2a0fc58c461b5b28d6b147fde5027c91f"
-  source = "github.com/groob/pkcs7"
+  packages = ["."]
+  revision = "8306686428a5fe132eac8cb7c4848af725098bd4"
 
 [[projects]]
   name = "github.com/go-kit/kit"
@@ -91,6 +87,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ca9e773906851e3fedb7dda45f4631ffabe76a8d855dd52341f5522786450e93"
+  inputs-digest = "f7424caf2f16e258b2cb2c513fecc497c61626d12904df12066347950b0515a4"
   solver-name = "gps-cdcl"
   solver-version = 1

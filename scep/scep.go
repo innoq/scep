@@ -175,8 +175,6 @@ type PKIMessage struct {
 	SignerKey  *rsa.PrivateKey
 	SignerCert *x509.Certificate
 
-	SCEPEncryptionAlgorithm int
-
 	logger log.Logger
 }
 
@@ -315,15 +313,9 @@ func (msg *PKIMessage) DecryptPKIEnvelope(cert *x509.Certificate, key *rsa.Priva
 		return err
 	}
 
-	algo, err := p7.EncryptionAlgorithm()
-	if err != nil {
-		return err
-	}
-	msg.SCEPEncryptionAlgorithm = algo
 
 	logKeyVals := []interface{}{
 		"msg", "decrypt pkiEnvelope",
-		"encryption_algorithm", algo,
 	}
 	defer func() { level.Debug(msg.logger).Log(logKeyVals...) }()
 
@@ -446,7 +438,7 @@ func (msg *PKIMessage) SignCSR(crtAuth *x509.Certificate, keyAuth *rsa.PrivateKe
 	}
 
 	// encrypt degenerate data using the original messages recipients
-	e7, err := pkcs7.Encrypt(deg, msg.p7.Certificates, pkcs7.WithEncryptionAlgorithm(msg.SCEPEncryptionAlgorithm))
+	e7, err := pkcs7.Encrypt(deg, msg.p7.Certificates)
 	if err != nil {
 		return nil, err
 	}
@@ -539,7 +531,7 @@ func NewCSRRequest(csr *x509.CertificateRequest, tmpl *PKIMessage, opts ...Optio
 	}
 
 	derBytes := csr.Raw
-	e7, err := pkcs7.Encrypt(derBytes, tmpl.Recipients, pkcs7.WithEncryptionAlgorithm(tmpl.SCEPEncryptionAlgorithm))
+	e7, err := pkcs7.Encrypt(derBytes, tmpl.Recipients)
 	if err != nil {
 		return nil, err
 	}
@@ -563,7 +555,6 @@ func NewCSRRequest(csr *x509.CertificateRequest, tmpl *PKIMessage, opts ...Optio
 	level.Debug(conf.logger).Log(
 		"msg", "creating SCEP CSR request",
 		"transaction_id", tID,
-		"encryption_algorithm", tmpl.SCEPEncryptionAlgorithm,
 		"signer_cn", tmpl.SignerCert.Subject.CommonName,
 	)
 
