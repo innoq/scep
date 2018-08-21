@@ -11,7 +11,8 @@
   branch = "master"
   name = "github.com/fullsailor/pkcs7"
   packages = ["."]
-  revision = "8306686428a5fe132eac8cb7c4848af725098bd4"
+  revision = "3ab7dcb90d3044de1ef2091fed22101a297ab485"
+  source = "github.com/andviro/pkcs7"
 
 [[projects]]
   name = "github.com/go-kit/kit"
@@ -76,17 +77,17 @@
     "context",
     "context/ctxhttp"
   ]
-  revision = "a0f8a16cb08c06df97cbdf9c47f4731ba548c33c"
+  revision = "922f4815f713f213882e8ef45e0d315b164d705c"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "bd9dbc187b6e1dacfdd2722a87e83093c2d7bd6e"
+  revision = "4ea2f632f6e912459fe60b26b1749377f0d889d5"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f7424caf2f16e258b2cb2c513fecc497c61626d12904df12066347950b0515a4"
+  inputs-digest = "c145f60919d865527588aec2ddbc96a82c5c79b0188d9b0cd0a099cc1dc6bdc5"
   solver-name = "gps-cdcl"
   solver-version = 1

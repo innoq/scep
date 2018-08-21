@@ -44,4 +44,5 @@
 
 [[constraint]]
   branch = "master"
-  name = "go.mozilla.org/pkcs7"
+  name = "github.com/fullsailor/pkcs7"
+  source = "github.com/andviro/pkcs7"
