@@ -1,7 +1,7 @@
 #!/bin/bash
 
 VERSION="0.3.0.0"
-NAME=scepserver
+NAME=scepclient
 OUTPUT=../../build
 
 echo "Building $NAME version $VERSION"
