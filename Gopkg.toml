@@ -45,4 +45,4 @@
 [[constraint]]
   branch = "master"
   name = "github.com/fullsailor/pkcs7"
-  source = "github.com/andviro/pkcs7"
+  source = "github.com/innoq/pkcs7"
