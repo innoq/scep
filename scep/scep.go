@@ -20,7 +20,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/innoq/scep/crypto/x509util"
-	"fmt"
 )
 
 // errors
@@ -308,8 +307,6 @@ func (msg *PKIMessage) parseMessageType() error {
 
 // DecryptPKIEnvelope decrypts the pkcs envelopedData inside the SCEP PKIMessage
 func (msg *PKIMessage) DecryptPKIEnvelope(cert *x509.Certificate, key *rsa.PrivateKey) error {
-	fmt.Printf("Content %s", msg.p7.Content)
-
 	p7, err := pkcs7.Parse(msg.p7.Content)
 	if err != nil {
 		return err
