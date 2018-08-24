@@ -34,6 +34,7 @@ type runCfg struct {
 	keyPath      string
 	keyBits      int
 	selfSignPath string
+	caCertPath   string
 	certPath     string
 	cn           string
 	subjectKeyId string
@@ -111,11 +112,21 @@ func run(cfg runCfg) error {
 		}
 		self = s
 	}
-
-	resp, certNum, err := client.GetCACert(ctx)
-	if err != nil {
-		return err
+	var resp []byte
+	var certNum int
+	if cfg.caCertPath == "" {
+		resp, certNum, err = client.GetCACert(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		resp, err = ioutil.ReadFile(cfg.caCertPath)
+		if err != nil {
+			return err
+		}
+		certNum = 1
 	}
+
 	var certs []*x509.Certificate
 	{
 		if certNum > 1 {
@@ -271,7 +282,8 @@ func main() {
 		flChallengePassword = flag.String("challenge", "", "enforce a challenge password")
 		flPKeyPath          = flag.String("private-key", "", "private key path, if there is no key, scepclient will create one")
 		flCsrPath           = flag.String("csr", "", "csr path, if there is no key, scepclient will create one")
-		flSelfSignPath      = flag.String("selfsignedcert", "", "self signed certificate path, if there is no key, scepclient will create one")
+		flSelfSignPath      = flag.String("self-signed-cert", "", "self signed certificate path, if there is no key, scepclient will create one")
+		flCaCertPath        = flag.String("ca-cert-path", "", "ca-cert path, if there is no ca-cert, scepclient will collect the ca-cert from the scep-server")
 		flCertPath          = flag.String("certificate", "", "certificate output path.")
 		flKeySize           = flag.Int("keySize", 2048, "rsa key size")
 		flOrg               = flag.String("organization", "scep-client", "organization for cert")
@@ -304,7 +316,7 @@ func main() {
 	}
 
 	dir := filepath.Dir(*flPKeyPath)
-	if *flCsrPath == ""{
+	if *flCsrPath == "" {
 		*flCsrPath = dir + "/csr.pem"
 	}
 	if *flSelfSignPath == "" {
@@ -324,6 +336,7 @@ func main() {
 		keyPath:      *flPKeyPath,
 		keyBits:      *flKeySize,
 		selfSignPath: *flSelfSignPath,
+		caCertPath:   *flCaCertPath,
 		certPath:     *flCertPath,
 		cn:           *flCName,
 		subjectKeyId: *flSubjectKeyId,

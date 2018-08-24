@@ -95,14 +95,16 @@ Usage of ./cmd/scepserver/scepserver ca:
 Usage of scepclient:
   -ca-fingerprint string
     	md5 fingerprint of CA certificate for NDES server.
+  -ca-cert-path string
+    	ca-cert path, if there is no ca-cert, scepclient will collect the ca-cert from the scep-server.
   -certificate string
     	certificate path, if there is no key, scepclient will create one
+  -csr
+    	csr path, if there is no key, scepclient will create one
   -challenge string
     	enforce a challenge password
   -cn string
     	common name for certificate (default "scepclient")
-  -subjectKeyId string
-    	sets the subjectKeyId of the certificate in the CMS message (default "123456789abcdef")
   -country string
     	country code in certificate (default "US")
   -debug
@@ -121,8 +123,12 @@ Usage of scepclient:
     	private key path, if there is no key, scepclient will create one
   -province string
     	province for certificate
+  -self-signed-cert string
+    	self signed certificate path, if there is no key, scepclient will create one
   -server-url string
     	SCEP server url
+  -subjectKeyId string
+    	sets the subjectKeyId of the certificate in the CMS message (default "123456789abcdef")
   -version
     	prints version information
 ```
