@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fullsailor/pkcs7"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/innoq/scep/client"
@@ -163,11 +164,17 @@ func run(cfg runCfg) error {
 		recipients = r
 	}
 
+	var algo int
+	if client.Supports("AES") || client.Supports("SCEPStandard") {
+		algo = pkcs7.EncryptionAlgorithmAES128GCM
+	}
+
 	tmpl := &scep.PKIMessage{
 		MessageType:             msgType,
 		Recipients:              recipients,
 		SignerKey:               key,
 		SignerCert:              signerCert,
+		SCEPEncryptionAlgorithm: algo,
 	}
 
 	if cfg.challenge != "" && msgType == scep.PKCSReq {
@@ -263,7 +270,9 @@ func main() {
 		flServerURL         = flag.String("server-url", "", "SCEP server url")
 		flChallengePassword = flag.String("challenge", "", "enforce a challenge password")
 		flPKeyPath          = flag.String("private-key", "", "private key path, if there is no key, scepclient will create one")
-		flCertPath          = flag.String("certificate", "", "certificate path, if there is no key, scepclient will create one")
+		flCsrPath           = flag.String("csr", "", "csr path, if there is no key, scepclient will create one")
+		flSelfSignPath      = flag.String("selfsignedcert", "", "self signed certificate path, if there is no key, scepclient will create one")
+		flCertPath          = flag.String("certificate", "", "certificate output path.")
 		flKeySize           = flag.Int("keySize", 2048, "rsa key size")
 		flOrg               = flag.String("organization", "scep-client", "organization for cert")
 		flCName             = flag.String("cn", "scepclient", "common name for certificate")
@@ -295,8 +304,12 @@ func main() {
 	}
 
 	dir := filepath.Dir(*flPKeyPath)
-	csrPath := dir + "/csr.pem"
-	selfSignPath := dir + "/self.pem"
+	if *flCsrPath == ""{
+		*flCsrPath = dir + "/csr.pem"
+	}
+	if *flSelfSignPath == "" {
+		*flSelfSignPath = dir + "/self.pem"
+	}
 	if *flCertPath == "" {
 		*flCertPath = dir + "/client.pem"
 	}
@@ -307,10 +320,10 @@ func main() {
 
 	cfg := runCfg{
 		dir:          dir,
-		csrPath:      csrPath,
+		csrPath:      *flCsrPath,
 		keyPath:      *flPKeyPath,
 		keyBits:      *flKeySize,
-		selfSignPath: selfSignPath,
+		selfSignPath: *flSelfSignPath,
 		certPath:     *flCertPath,
 		cn:           *flCName,
 		subjectKeyId: *flSubjectKeyId,

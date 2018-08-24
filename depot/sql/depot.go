@@ -1,44 +1,72 @@
-package file
+package sql
 
 import (
-	"bufio"
-	"bytes"
-	"crypto/rsa"
+"fmt"
+"os"
+"database/sql/driver"
+	"database/sql"
 	"crypto/x509"
-	"encoding/pem"
-	"errors"
-	"fmt"
-	"io"
-	"io/ioutil"
+	"crypto/rsa"
 	"math/big"
-	"os"
-	"path/filepath"
-	"strconv"
+	"bufio"
+	"io"
 	"strings"
 	"time"
+	"bytes"
+	"strconv"
+	"io/ioutil"
+	"path/filepath"
+	"encoding/pem"
+	"log"
+	"errors"
 )
 
 // NewFileDepot returns a new cert depot.
-func NewFileDepot(path string) (*fileDepot, error) {
+func NewFileDepot(path string, dbdriverConnector driver.Connector) (*sqlDepot, error) {
 	f, err := os.OpenFile(fmt.Sprintf("%s/index.txt", path),
 		os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	return &fileDepot{dirPath: path}, nil
+
+	db := sql.OpenDB(dbdriverConnector)
+	errDB := db.Ping()
+
+	if errDB != nil {
+		return nil, errDB
+	}
+	defer db.Close()
+
+	return &sqlDepot{dirPath: path, dbdriver:dbdriverConnector}, nil
 }
 
-type fileDepot struct {
+type sqlDepot struct {
 	dirPath string
+	dbdriver driver.Connector
 }
 
-func (d *fileDepot) CA(pass []byte) ([]*x509.Certificate, *rsa.PrivateKey, error) {
+
+const SQLcreateCertStore = `
+create table if not exists certdepot
+(
+	certificate_dn varchar(255) PRIMARY KEY,
+    certificate blob,
+    validDate datetime,
+    serialHex varchar(255),
+    valid varchar(1)
+);
+`
+const SQLinsertCert =`insert into devices (certificate_dn, certificate, validDate, serialHex, valid) values (?,?,?,?,?)`
+
+
+func (d *sqlDepot) CA(pass []byte) ([]*x509.Certificate, *rsa.PrivateKey, error) {
+
 	caPEM, err := d.getFile("ca.pem")
 	if err != nil {
 		return nil, nil, err
 	}
-	certs, err := loadCerts(caPEM.Data)
+	cert, err := loadCert(caPEM.Data)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -50,7 +78,7 @@ func (d *fileDepot) CA(pass []byte) ([]*x509.Certificate, *rsa.PrivateKey, error
 	if err != nil {
 		return nil, nil, err
 	}
-	return certs, key, nil
+	return []*x509.Certificate{cert}, key, nil
 }
 
 // file permissions
@@ -61,7 +89,7 @@ const (
 )
 
 // Put adds a certificate to the depot
-func (d *fileDepot) Put(cn string, crt *x509.Certificate) error {
+func (d *sqlDepot) Put(cn string, crt *x509.Certificate) error {
 	if crt == nil {
 		return errors.New("crt is nil")
 	}
@@ -102,7 +130,7 @@ func (d *fileDepot) Put(cn string, crt *x509.Certificate) error {
 	return nil
 }
 
-func (d *fileDepot) Serial() (*big.Int, error) {
+func (d *sqlDepot) Serial() (*big.Int, error) {
 	name := d.path("serial")
 	s := big.NewInt(2)
 	if err := d.check("serial"); err != nil {
@@ -165,7 +193,7 @@ func makeDn(cert *x509.Certificate) string {
 }
 
 // Determine if the cadb already has a valid certificate with the same name
-func (d *fileDepot) HasCN(cn string, allowTime int, cert *x509.Certificate, revokeOldCertificate bool) (bool, error) {
+func (d *sqlDepot) HasCN(cn string, allowTime int, cert *x509.Certificate, revokeOldCertificate bool) (bool, error) {
 
 	var addDB bytes.Buffer
 	candidates := make(map[string]string)
@@ -246,24 +274,13 @@ func (d *fileDepot) HasCN(cn string, allowTime int, cert *x509.Certificate, revo
 	return true, nil
 }
 
-func (d *fileDepot) writeDB(cn string, serial *big.Int, filename string, cert *x509.Certificate) error {
+func (d *sqlDepot) writeDB(cn string, serial *big.Int, filename string, cert *x509.Certificate) error {
 
-	var dbEntry bytes.Buffer
 
 	// Revoke old certificate
 	if _, err := d.HasCN(cn, 0, cert, true); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(d.dirPath, 0755); err != nil {
-		return err
-	}
-	name := d.path("index.txt")
-
-	file, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR|os.O_APPEND, dbPerm)
-	if err != nil {
-		return fmt.Errorf("could not append to "+name+" : %q\n", err.Error())
-	}
-	defer file.Close()
 
 	// Format of the caDB, see http://pki-tutorial.readthedocs.io/en/latest/cadb.html
 	//   STATUSFLAG  EXPIRATIONDATE  REVOCATIONDATE(or emtpy)	SERIAL_IN_HEX   CERTFILENAME_OR_'unknown'   Certificate_DN
@@ -277,27 +294,16 @@ func (d *fileDepot) writeDB(cn string, serial *big.Int, filename string, cert *x
 
 	dn := makeDn(cert)
 
-	// Valid
-	dbEntry.WriteString("V\t")
-	// Valid till
-	dbEntry.WriteString(validDate + "\t")
-	// Empty (not revoked)
-	dbEntry.WriteString("\t")
-	// Serial in Hex
-	dbEntry.WriteString(serialHex + "\t")
-	// Certificate file name
-	dbEntry.WriteString(filename + "\t")
-	// Certificate DN
-	dbEntry.WriteString(dn)
-	dbEntry.WriteString("\n")
+	err := d.executeSql(SQLinsertCert, dn, pemCert(cert.Raw), validDate, serialHex, 'V')
 
-	if _, err := file.Write(dbEntry.Bytes()); err != nil {
+
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *fileDepot) writeSerial(serial *big.Int) error {
+func (d *sqlDepot) writeSerial(serial *big.Int) error {
 	if err := os.MkdirAll(d.dirPath, 0755); err != nil {
 		return err
 	}
@@ -318,7 +324,7 @@ func (d *fileDepot) writeSerial(serial *big.Int) error {
 }
 
 // read serial and increment
-func (d *fileDepot) incrementSerial(s *big.Int) error {
+func (d *sqlDepot) incrementSerial(s *big.Int) error {
 	serial := s.Add(s, big.NewInt(1))
 	if err := d.writeSerial(serial); err != nil {
 		return err
@@ -331,7 +337,7 @@ type file struct {
 	Data []byte
 }
 
-func (d *fileDepot) check(path string) error {
+func (d *sqlDepot) check(path string) error {
 	name := d.path(path)
 	_, err := os.Stat(name)
 	if err != nil {
@@ -340,7 +346,7 @@ func (d *fileDepot) check(path string) error {
 	return nil
 }
 
-func (d *fileDepot) getFile(path string) (*file, error) {
+func (d *sqlDepot) getFile(path string) (*file, error) {
 	if err := d.check(path); err != nil {
 		return nil, err
 	}
@@ -352,7 +358,7 @@ func (d *fileDepot) getFile(path string) (*file, error) {
 	return &file{fi, b}, err
 }
 
-func (d *fileDepot) path(name string) string {
+func (d *sqlDepot) path(name string) string {
 	return filepath.Join(d.dirPath, name)
 }
 
@@ -379,32 +385,16 @@ func loadKey(data []byte, password []byte) (*rsa.PrivateKey, error) {
 }
 
 // load an encrypted private key from disk
-func loadCerts(data []byte) ([]*x509.Certificate, error) {
-	certificates := []*x509.Certificate{}
-	last := data
-	for {
-		pemBlock, remainder := pem.Decode(last)
-
-		if pemBlock == nil {
-			return nil, errors.New("PEM decode failed")
-		}
-
-		if pemBlock.Type != certificatePEMBlockType {
-			return nil, errors.New("unmatched type or headers")
-		}
-
-		last = remainder
-		cert, err := x509.ParseCertificate(pemBlock.Bytes)
-		if err != nil {
-			return nil, err
-		}
-
-		certificates = append(certificates, cert)
-
-		if len(last) == 0 {
-			return certificates, nil
-		}
+func loadCert(data []byte) (*x509.Certificate, error) {
+	pemBlock, _ := pem.Decode(data)
+	if pemBlock == nil {
+		return nil, errors.New("PEM decode failed")
 	}
+	if pemBlock.Type != certificatePEMBlockType {
+		return nil, errors.New("unmatched type or headers")
+	}
+
+	return x509.ParseCertificate(pemBlock.Bytes)
 }
 
 func pemCert(derBytes []byte) []byte {
@@ -415,4 +405,20 @@ func pemCert(derBytes []byte) []byte {
 	}
 	out := pem.EncodeToMemory(pemBlock)
 	return out
+}
+
+func (d *sqlDepot) executeSql(query string, args ...interface{}) error{
+	db := sql.OpenDB(d.dbdriver)
+	tx, _ := db.Begin()
+
+	result, err := db.Exec(query, args)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+
+	log.Printf("Rows changed: %v", rows)
+	tx.Commit()
+	db.Close()
+
 }

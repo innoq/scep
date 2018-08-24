@@ -3,6 +3,7 @@
 // https://tools.ietf.org/html/draft-gutmann-scep-02
 package scep
 
+import "C"
 import (
 	"bytes"
 	"crypto"
@@ -20,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/innoq/scep/crypto/x509util"
+	"fmt"
 )
 
 // errors
@@ -165,6 +167,7 @@ type PKIMessage struct {
 	// parsed
 	p7 *pkcs7.PKCS7
 
+
 	// decrypted enveloped content
 	pkiEnvelope []byte
 
@@ -174,6 +177,8 @@ type PKIMessage struct {
 	// Signer info
 	SignerKey  *rsa.PrivateKey
 	SignerCert *x509.Certificate
+
+	SCEPEncryptionAlgorithm int
 
 	logger log.Logger
 }
@@ -210,7 +215,7 @@ func ParsePKIMessage(data []byte, opts ...Option) (*PKIMessage, error) {
 	}
 
 	// parse PKCS#7 signed data
-	p7, err := pkcs7.Parse(data)
+	p7, err := pkcs7.Parse(data, false)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +309,9 @@ func (msg *PKIMessage) parseMessageType() error {
 
 // DecryptPKIEnvelope decrypts the pkcs envelopedData inside the SCEP PKIMessage
 func (msg *PKIMessage) DecryptPKIEnvelope(cert *x509.Certificate, key *rsa.PrivateKey) error {
-	p7, err := pkcs7.Parse(msg.p7.Content)
+	fmt.Printf("Content %s", msg.p7.Content)
+
+	p7, err := pkcs7.Parse(msg.p7.Content, true)
 	if err != nil {
 		return err
 	}
@@ -313,9 +320,15 @@ func (msg *PKIMessage) DecryptPKIEnvelope(cert *x509.Certificate, key *rsa.Priva
 		return err
 	}
 
+	algo, err := p7.EncryptionAlgorithm()
+	if err != nil {
+		return err
+	}
+	msg.SCEPEncryptionAlgorithm = algo
 
 	logKeyVals := []interface{}{
 		"msg", "decrypt pkiEnvelope",
+		"encryption_algorithm", algo,
 	}
 	defer func() { level.Debug(msg.logger).Log(logKeyVals...) }()
 
@@ -438,6 +451,7 @@ func (msg *PKIMessage) SignCSR(crtAuth *x509.Certificate, keyAuth *rsa.PrivateKe
 	}
 
 	// encrypt degenerate data using the original messages recipients
+	pkcs7.ContentEncryptionAlgorithm = msg.SCEPEncryptionAlgorithm
 	e7, err := pkcs7.Encrypt(deg, msg.p7.Certificates)
 	if err != nil {
 		return nil, err
@@ -516,7 +530,7 @@ func DegenerateCertificates(certs []*x509.Certificate) ([]byte, error) {
 
 // CACerts extract CA Certificate or chain from pkcs7 degenerate signed data
 func CACerts(data []byte) ([]*x509.Certificate, error) {
-	p7, err := pkcs7.Parse(data)
+	p7, err := pkcs7.Parse(data, false)
 	if err != nil {
 		return nil, err
 	}
@@ -531,6 +545,7 @@ func NewCSRRequest(csr *x509.CertificateRequest, tmpl *PKIMessage, opts ...Optio
 	}
 
 	derBytes := csr.Raw
+	pkcs7.ContentEncryptionAlgorithm = tmpl.SCEPEncryptionAlgorithm
 	e7, err := pkcs7.Encrypt(derBytes, tmpl.Recipients)
 	if err != nil {
 		return nil, err
@@ -555,6 +570,7 @@ func NewCSRRequest(csr *x509.CertificateRequest, tmpl *PKIMessage, opts ...Optio
 	level.Debug(conf.logger).Log(
 		"msg", "creating SCEP CSR request",
 		"transaction_id", tID,
+		"encryption_algorithm", tmpl.SCEPEncryptionAlgorithm,
 		"signer_cn", tmpl.SignerCert.Subject.CommonName,
 	)
 
