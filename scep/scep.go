@@ -215,7 +215,7 @@ func ParsePKIMessage(data []byte, opts ...Option) (*PKIMessage, error) {
 	}
 
 	// parse PKCS#7 signed data
-	p7, err := pkcs7.Parse(data, false)
+	p7, err := pkcs7.Parse(data)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +311,7 @@ func (msg *PKIMessage) parseMessageType() error {
 func (msg *PKIMessage) DecryptPKIEnvelope(cert *x509.Certificate, key *rsa.PrivateKey) error {
 	fmt.Printf("Content %s", msg.p7.Content)
 
-	p7, err := pkcs7.Parse(msg.p7.Content, true)
+	p7, err := pkcs7.Parse(msg.p7.Content)
 	if err != nil {
 		return err
 	}
@@ -530,7 +530,7 @@ func DegenerateCertificates(certs []*x509.Certificate) ([]byte, error) {
 
 // CACerts extract CA Certificate or chain from pkcs7 degenerate signed data
 func CACerts(data []byte) ([]*x509.Certificate, error) {
-	p7, err := pkcs7.Parse(data, false)
+	p7, err := pkcs7.Parse(data)
 	if err != nil {
 		return nil, err
 	}
