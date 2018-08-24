@@ -3,7 +3,6 @@
 // https://tools.ietf.org/html/draft-gutmann-scep-02
 package scep
 
-import "C"
 import (
 	"bytes"
 	"crypto"
