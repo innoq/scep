@@ -1,4 +1,6 @@
-`scep` is a Simple Certificate Enrollment Protocol server and client
+`scep` is a Simple Certificate Enrollment Protocol server and client.
+
+Please take care, that this implementation has one difference to SCEP:`GetCaCert` returns allways a signedData-PKCS7-container. 
 
 # Installation
 A binary release is available on the releases page.
