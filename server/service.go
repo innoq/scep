@@ -17,6 +17,7 @@ import (
 	"github.com/innoq/scep/csrverifier"
 	"github.com/innoq/scep/depot"
 	"github.com/innoq/scep/scep"
+	"github.com/fullsailor/pkcs7"
 )
 
 // Service is the interface for all supported SCEP server operations.
@@ -76,11 +77,25 @@ func (svc *service) GetCACert(ctx context.Context) ([]byte, int, error) {
 	if len(svc.ca) == 0 {
 		return nil, 0, errors.New("missing CA Cert")
 	}
+	var data []byte
 	if len(svc.ca) == 1 {
-		return svc.ca[0].Raw, 1, nil
+		data = svc.ca[0].Raw
 	}
 	data, err := scep.DegenerateCertificates(svc.ca)
-	return data, len(svc.ca), err
+
+	signedData, err := pkcs7.NewSignedData(data)
+	config := pkcs7.SignerInfoConfig{}
+	if err := signedData.AddSigner(svc.ca[0], svc.caKey, config); err != nil {
+		return nil, 0, err
+	}
+	for _, element := range svc.ca {
+		signedData.AddCertificate(element)
+	}
+	rawSignedData, err := signedData.Finish()
+	if err != nil {
+		return nil, 0,err
+	}
+	return rawSignedData, len(svc.ca), err
 }
 
 func (svc *service) PKIOperation(ctx context.Context, data []byte) ([]byte, error) {
