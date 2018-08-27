@@ -117,15 +117,17 @@ func run(cfg runCfg) error {
 	{
 		if cfg.caCertPath == "" {
 			resp, certNum, err := client.GetCACert(ctx)
+			logger.Log("info",fmt.Sprintf("The cacert resp: %v, %v", resp[0:5], certNum))
 			if err != nil {
 				return err
 			}
-			if certNum == 0 {
-				return fmt.Errorf("no certificates returned")
-			}
+
 			certs, err = scep.CACerts(resp)
 			if err != nil {
 				return err
+			}
+			if len(certs) == 0 {
+				return fmt.Errorf("no certificates returned")
 			}
 		} else {
 			resp, err = ioutil.ReadFile(cfg.caCertPath)
