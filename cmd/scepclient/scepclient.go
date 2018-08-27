@@ -134,7 +134,7 @@ func run(cfg runCfg) error {
 			if err != nil {
 				return err
 			}
-			certs, err = x509.ParseCertificates(resp)
+			certs, err = loadCerts(resp)
 		}
 
 	}

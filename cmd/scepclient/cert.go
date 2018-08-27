@@ -99,3 +99,31 @@ func loadPEMCertFromFile(path string) (*x509.Certificate, error) {
 
 	return x509.ParseCertificate(pemBlock.Bytes)
 }
+// load an encrypted private key from disk
+func loadCerts(data []byte) ([]*x509.Certificate, error) {
+	certificates := []*x509.Certificate{}
+	last := data
+	for {
+		pemBlock, remainder := pem.Decode(last)
+
+		if pemBlock == nil {
+			return nil, errors.New("PEM decode failed")
+		}
+
+		if pemBlock.Type != certificatePEMBlockType {
+			return nil, errors.New("unmatched type or headers")
+		}
+
+		last = remainder
+		cert, err := x509.ParseCertificate(pemBlock.Bytes)
+		if err != nil {
+			return nil, err
+		}
+
+		certificates = append(certificates, cert)
+
+		if len(last) == 0 {
+			return certificates, nil
+		}
+	}
+}
