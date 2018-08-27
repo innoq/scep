@@ -113,36 +113,28 @@ func run(cfg runCfg) error {
 		self = s
 	}
 	var resp []byte
-	var certNum int
-	if cfg.caCertPath == "" {
-		resp, certNum, err = client.GetCACert(ctx)
-		if err != nil {
-			return err
-		}
-	} else {
-		resp, err = ioutil.ReadFile(cfg.caCertPath)
-		if err != nil {
-			return err
-		}
-		certNum = 1
-	}
-
 	var certs []*x509.Certificate
 	{
-		if certNum > 1 {
+		if cfg.caCertPath == "" {
+			resp, certNum, err := client.GetCACert(ctx)
+			if err != nil {
+				return err
+			}
+			if certNum == 0 {
+				return fmt.Errorf("no certificates returned")
+			}
 			certs, err = scep.CACerts(resp)
 			if err != nil {
 				return err
 			}
-			if len(certs) < 1 {
-				return fmt.Errorf("no certificates returned")
-			}
 		} else {
-			certs, err = x509.ParseCertificates(resp)
+			resp, err = ioutil.ReadFile(cfg.caCertPath)
 			if err != nil {
 				return err
 			}
+			certs, err = x509.ParseCertificates(resp)
 		}
+
 	}
 
 	var signerCert *x509.Certificate
