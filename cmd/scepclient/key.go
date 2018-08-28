@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	rsaPrivateKeyPEMBlockType = "RSA PRIVATE KEY"
+	rsaPrivateKeyPEMBlockType = "PRIVATE KEY"
 )
 
 // create a new RSA private key
@@ -62,9 +62,9 @@ func loadKeyFromFile(path string) (*rsa.PrivateKey, error) {
 	if pemBlock == nil {
 		return nil, errors.New("PEM decode failed")
 	}
-	if pemBlock.Type != rsaPrivateKeyPEMBlockType {
-		return nil, errors.New("unmatched type or headers")
-	}
+//	if pemBlock.Type != rsaPrivateKeyPEMBlockType {
+//		return nil, errors.New("unmatched type or headers")
+//	}
 
 	return x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
 }
