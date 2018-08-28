@@ -180,10 +180,11 @@ func (svc *service) PKIOperation(ctx context.Context, data []byte) ([]byte, erro
 		NotBefore:    time.Now().Add(-600).UTC(),
 		NotAfter:     time.Now().AddDate(0, 0, duration).UTC(),
 		SubjectKeyId: id,
-		KeyUsage:     x509.KeyUsageDigitalSignature,
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment ,
 		ExtKeyUsage: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageClientAuth,
 		},
+		IsCA: false,
 		SignatureAlgorithm: csr.SignatureAlgorithm,
 	}
 
