@@ -11,13 +11,13 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/fullsailor/pkcs7"
 	"github.com/go-kit/kit/log"
 	"github.com/innoq/scep/challenge"
 	"github.com/innoq/scep/cmsverifier"
 	"github.com/innoq/scep/csrverifier"
 	"github.com/innoq/scep/depot"
 	"github.com/innoq/scep/scep"
-	"github.com/fullsailor/pkcs7"
 )
 
 // Service is the interface for all supported SCEP server operations.

@@ -81,7 +81,7 @@ func run(cfg runCfg) error {
 	if err != nil {
 		return err
 	}
-
+	logger.Log("info","")
 	opts := &csrOptions{
 		cn:        cfg.cn,
 		org:       cfg.org,
