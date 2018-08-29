@@ -15,7 +15,7 @@ const (
 	privateKeyPEMBlockType = "PRIVATE KEY"
 )
 
-// create a new RSA private key
+// create a new RSA private privateKey
 func newRSAKey(bits int) (*rsa.PrivateKey, error) {
 	private, err := rsa.GenerateKey(rand.Reader, bits)
 	if err != nil {
@@ -24,7 +24,7 @@ func newRSAKey(bits int) (*rsa.PrivateKey, error) {
 	return private, nil
 }
 
-// load key if it exists or create a new one
+// load privateKey if it exists or create a new one
 func loadOrMakeKey(path string, rsaBits int) (*rsa.PrivateKey, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
@@ -35,7 +35,7 @@ func loadOrMakeKey(path string, rsaBits int) (*rsa.PrivateKey, error) {
 	}
 	defer file.Close()
 
-	// write key
+	// write privateKey
 	priv, err := newRSAKey(rsaBits)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func loadOrMakeKey(path string, rsaBits int) (*rsa.PrivateKey, error) {
 	return priv, nil
 }
 
-// load a PEM private key from disk
+// load a PEM private privateKey from disk
 func loadKeyFromFile(path string) (*rsa.PrivateKey, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {

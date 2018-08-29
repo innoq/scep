@@ -19,7 +19,7 @@ const (
 
 type csrOptions struct {
 	cn, org, country, ou, locality, province, challenge string
-	key                                                 *rsa.PrivateKey
+	privateKey                                          *rsa.PrivateKey
 	sigAlgo                                             x509.SignatureAlgorithm
 }
 
@@ -51,7 +51,7 @@ func loadOrMakeCSR(path string, opts *csrOptions) (*x509.CertificateRequest, err
 		template.ChallengePassword = opts.challenge
 	}
 
-	derBytes, err := x509util.CreateCertificateRequest(rand.Reader, &template, opts.key)
+	derBytes, err := x509util.CreateCertificateRequest(rand.Reader, &template, opts.privateKey)
 	pemBlock := &pem.Block{
 		Type:  csrPEMBlockType,
 		Bytes: derBytes,

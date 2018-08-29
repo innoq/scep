@@ -29,25 +29,26 @@ var (
 )
 
 type runCfg struct {
-	dir          string
-	csrPath      string
-	keyPath      string
-	keyBits      int
-	selfSignPath string
-	caCertPath   string
-	certPath     string
-	cn           string
-	subjectKeyId string
-	org          string
-	ou           string
-	locality     string
-	province     string
-	country      string
-	challenge    string
-	serverURL    string
-	caMD5        string
-	debug        bool
-	logfmt       string
+	dir                   string
+	csrPrivateKeySize     int
+	csrPrivateKeyPath     string
+	csrPublicKeyPath      string
+	csrPath               string
+	cmsSignPrivateKeyPath string
+	cmsSignPublicKeyPath  string
+	caCertPath            string
+	cn                    string
+	subjectKeyId          string
+	org                   string
+	ou                    string
+	locality              string
+	province              string
+	country               string
+	challenge             string
+	serverURL             string
+	caMD5                 string
+	debug                 bool
+	logfmt                string
 }
 
 func run(cfg runCfg) error {
@@ -77,21 +78,24 @@ func run(cfg runCfg) error {
 		sigAlgo = x509.SHA256WithRSA
 	}
 
-	key, err := loadOrMakeKey(cfg.keyPath, cfg.keyBits)
+	csrPrivateKey, err := loadOrMakeKey(cfg.csrPrivateKeyPath, cfg.csrPrivateKeySize)
 	if err != nil {
 		return err
 	}
-	logger.Log("info","")
+
+	csrPublicKey, _ := loadPEMCertFromFile(cfg.csrPublicKeyPath)
+
+	logger.Log("info", "")
 	opts := &csrOptions{
-		cn:        cfg.cn,
-		org:       cfg.org,
-		country:   strings.ToUpper(cfg.country),
-		ou:        cfg.ou,
-		locality:  cfg.locality,
-		province:  cfg.province,
-		challenge: cfg.challenge,
-		key:       key,
-		sigAlgo:   sigAlgo,
+		cn:         cfg.cn,
+		org:        cfg.org,
+		country:    strings.ToUpper(cfg.country),
+		ou:         cfg.ou,
+		locality:   cfg.locality,
+		province:   cfg.province,
+		challenge:  cfg.challenge,
+		privateKey: csrPrivateKey,
+		sigAlgo:    sigAlgo,
 	}
 
 	csr, err := loadOrMakeCSR(cfg.csrPath, opts)
@@ -100,24 +104,15 @@ func run(cfg runCfg) error {
 		os.Exit(1)
 	}
 
-	var self *x509.Certificate
-	cert, err := loadPEMCertFromFile(cfg.certPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		s, err := loadOrSign(cfg.selfSignPath, key, csr, cfg.subjectKeyId)
-		if err != nil {
-			return err
-		}
-		self = s
-	}
+	cmsSignPrivateKey, err := loadOrMakeKey(cfg.cmsSignPrivateKeyPath, cfg.csrPrivateKeySize)
+	cmsSignPublicKey, err := loadOrSign(cfg.cmsSignPublicKeyPath, cmsSignPrivateKey, csr, cfg.subjectKeyId)
+
 	var resp []byte
 	var certs []*x509.Certificate
 	{
 		if cfg.caCertPath == "" {
 			resp, certNum, err := client.GetCACert(ctx)
-			logger.Log("info",fmt.Sprintf("The cacert resp: %v, %v", resp[0:5], certNum))
+			logger.Log("info", fmt.Sprintf("The cacert resp: %v, %v", resp[0:5], certNum))
 			if err != nil {
 				return err
 			}
@@ -139,19 +134,12 @@ func run(cfg runCfg) error {
 
 	}
 
-	var signerCert *x509.Certificate
-	{
-		if cert != nil {
-			signerCert = cert
-		} else {
-			signerCert = self
-		}
-	}
+
 
 	var msgType scep.MessageType
 	{
 		// TODO validate CA and set UpdateReq if needed
-		if cert != nil {
+		if csrPublicKey != nil {
 			msgType = scep.RenewalReq
 		} else {
 			msgType = scep.PKCSReq
@@ -177,8 +165,8 @@ func run(cfg runCfg) error {
 	tmpl := &scep.PKIMessage{
 		MessageType:             msgType,
 		Recipients:              recipients,
-		SignerKey:               key,
-		SignerCert:              signerCert,
+		SignerKey:               cmsSignPrivateKey,
+		SignerCert:              cmsSignPublicKey,
 		SCEPEncryptionAlgorithm: algo,
 	}
 
@@ -221,20 +209,13 @@ func run(cfg runCfg) error {
 		break // on scep.SUCCESS
 	}
 
-	if err := respMsg.DecryptPKIEnvelope(signerCert, key); err != nil {
+	if err := respMsg.DecryptPKIEnvelope(cmsSignPublicKey, cmsSignPrivateKey); err != nil {
 		return errors.Wrapf(err, "decrypt pkiEnvelope, msgType: %s, status %s", msgType, respMsg.PKIStatus)
 	}
 
 	respCert := respMsg.CertRepMessage.Certificate
-	if err := ioutil.WriteFile(cfg.certPath, pemCert(respCert.Raw), 0666); err != nil {
+	if err := ioutil.WriteFile(cfg.csrPublicKeyPath, pemCert(respCert.Raw), 0666); err != nil {
 		return err
-	}
-
-	// remove self signer if used
-	if self != nil {
-		if err := os.Remove(cfg.selfSignPath); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -255,9 +236,9 @@ func findRecipients(fingerprint string, certs []*x509.Certificate) ([]*x509.Cert
 	return nil, errors.Errorf("could not find cert for md5 %s", fingerprint)
 }
 
-func validateFlags(keyPath, serverURL string) error {
-	if keyPath == "" {
-		return errors.New("must specify private key path")
+func validateFlags(csrPrivateKeyPath, serverURL string) error {
+	if csrPrivateKeyPath == "" {
+		return errors.New("must specify csr-privateKey path")
 	}
 	if serverURL == "" {
 		return errors.New("must specify server-url flag parameter")
@@ -271,22 +252,22 @@ func validateFlags(keyPath, serverURL string) error {
 
 func main() {
 	var (
-		flVersion           = flag.Bool("version", false, "prints version information")
-		flServerURL         = flag.String("server-url", "", "SCEP server url")
-		flChallengePassword = flag.String("challenge", "", "enforce a challenge password")
-		flPKeyPath          = flag.String("private-key", "", "private key path, if there is no key, scepclient will create one")
-		flCsrPath           = flag.String("csr", "", "csr path, if there is no key, scepclient will create one")
-		flSelfSignPath      = flag.String("self-signed-cert", "", "self signed certificate path, if there is no key, scepclient will create one")
-		flCaCertPath        = flag.String("ca-cert-path", "", "ca-cert path, if there is no ca-cert, scepclient will collect the ca-cert from the scep-server")
-		flCertPath          = flag.String("certificate", "", "certificate output path.")
-		flKeySize           = flag.Int("keySize", 2048, "rsa key size")
-		flOrg               = flag.String("organization", "scep-client", "organization for cert")
-		flCName             = flag.String("cn", "scepclient", "common name for certificate")
-		flSubjectKeyId      = flag.String("subjectKeyId", "123456789abcdef", "subjectKeyId for the cms certificate")
-		flOU                = flag.String("ou", "MDM", "organizational unit for certificate")
-		flLoc               = flag.String("locality", "", "locality for certificate")
-		flProvince          = flag.String("province", "", "province for certificate")
-		flCountry           = flag.String("country", "US", "country code in certificate")
+		flVersion               = flag.Bool("version", false, "prints version information")
+		flServerURL             = flag.String("server-url", "", "SCEP server url")
+		flCsrPrivateKeySize     = flag.Int("csr-privateKey-size", 2048, "rsa privateKey size")
+		flCsrPrivateKeyPath     = flag.String("csr-privateKey", "", "client-privateKey output path, if there is no privateKey, scepclient will create one.")
+		flCsrPublicKeyPath      = flag.String("csr-publicKey", "", "client-publicKey (the client certificate) output path.")
+		flCmsSignPublicKeyPath  = flag.String("cms-sign-publicKey", "", " privateKey path for the cms-signatur, if there is no privateKey, scepclient will create one")
+		flCmsSignPrivateKeyPath = flag.String("cms-sign-privateKey", "", "publicKey path for the cms-signatur, if there is no publicKey, scepclient will create one")
+		flCaCertPath            = flag.String("ca-cert", "", "ca-cert path, if there is no ca-cert, scepclient will collect the ca-cert from the scep-server")
+		flChallengePassword     = flag.String("challenge", "", "enforce a challenge password")
+		flCName                 = flag.String("cn", "scepclient", "common name for certificate")
+		flOrg                   = flag.String("organization", "scep-client", "organization for cert")
+		flSubjectKeyId          = flag.String("subjectKeyId", "123456789abcdef", "subjectKeyId for the cms certificate")
+		flLoc                   = flag.String("locality", "", "locality for certificate")
+		flProvince              = flag.String("province", "", "province for certificate")
+		flOU                    = flag.String("ou", "MDM", "organizational unit for certificate")
+		flCountry               = flag.String("country", "US", "country code in certificate")
 
 		// in case of multiple certificate authorities, we need to figure out who the recipient of the encrypted
 		// data is.
@@ -304,20 +285,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	if err := validateFlags(*flPKeyPath, *flServerURL); err != nil {
+	if err := validateFlags(*flCsrPrivateKeyPath, *flServerURL); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	dir := filepath.Dir(*flCsrPrivateKeyPath)
+	csrPath := dir + "/csr.pem"
 
-	dir := filepath.Dir(*flPKeyPath)
-	if *flCsrPath == "" {
-		*flCsrPath = dir + "/csr.pem"
+	if *flCsrPublicKeyPath == "" {
+		*flCsrPublicKeyPath = dir + "/client_cert.pem"
 	}
-	if *flSelfSignPath == "" {
-		*flSelfSignPath = dir + "/self.pem"
+	if *flCmsSignPublicKeyPath == "" {
+		*flCmsSignPublicKeyPath = dir + "/cms_public_key.pem"
 	}
-	if *flCertPath == "" {
-		*flCertPath = dir + "/client.pem"
+	if *flCmsSignPrivateKeyPath == "" {
+		*flCmsSignPrivateKeyPath = dir + "/cms_private_key.pem"
 	}
 	var logfmt string
 	if *flLogJSON {
@@ -325,25 +307,26 @@ func main() {
 	}
 
 	cfg := runCfg{
-		dir:          dir,
-		csrPath:      *flCsrPath,
-		keyPath:      *flPKeyPath,
-		keyBits:      *flKeySize,
-		selfSignPath: *flSelfSignPath,
-		caCertPath:   *flCaCertPath,
-		certPath:     *flCertPath,
-		cn:           *flCName,
-		subjectKeyId: *flSubjectKeyId,
-		org:          *flOrg,
-		country:      *flCountry,
-		locality:     *flLoc,
-		ou:           *flOU,
-		province:     *flProvince,
-		challenge:    *flChallengePassword,
-		serverURL:    *flServerURL,
-		caMD5:        *flCAFingerprint,
-		debug:        *flDebugLogging,
-		logfmt:       logfmt,
+		dir:                   dir,
+		csrPrivateKeySize:     *flCsrPrivateKeySize,
+		csrPrivateKeyPath:     *flCsrPrivateKeyPath,
+		csrPublicKeyPath:      *flCsrPublicKeyPath,
+		cmsSignPrivateKeyPath: *flCmsSignPrivateKeyPath,
+		cmsSignPublicKeyPath:  *flCmsSignPublicKeyPath,
+		csrPath:               csrPath,
+		caCertPath:            *flCaCertPath,
+		cn:                    *flCName,
+		subjectKeyId:          *flSubjectKeyId,
+		org:                   *flOrg,
+		country:               *flCountry,
+		locality:              *flLoc,
+		ou:                    *flOU,
+		province:              *flProvince,
+		challenge:             *flChallengePassword,
+		serverURL:             *flServerURL,
+		caMD5:                 *flCAFingerprint,
+		debug:                 *flDebugLogging,
+		logfmt:                logfmt,
 	}
 
 	if err := run(cfg); err != nil {

@@ -99,7 +99,7 @@ func loadPEMCertFromFile(path string) (*x509.Certificate, error) {
 
 	return x509.ParseCertificate(pemBlock.Bytes)
 }
-// load an encrypted private key from disk
+// load an encrypted private privateKey from disk
 func loadCerts(data []byte) ([]*x509.Certificate, error) {
 	certificates := []*x509.Certificate{}
 	last := data
