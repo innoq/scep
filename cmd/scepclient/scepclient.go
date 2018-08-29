@@ -261,13 +261,13 @@ func main() {
 		flCmsSignPrivateKeyPath = flag.String("cms-sign-privateKey", "", "publicKey path for the cms-signatur, if there is no publicKey, scepclient will create one")
 		flCaCertPath            = flag.String("ca-cert", "", "ca-cert path, if there is no ca-cert, scepclient will collect the ca-cert from the scep-server")
 		flChallengePassword     = flag.String("challenge", "", "enforce a challenge password")
-		flCName                 = flag.String("cn", "scepclient", "common name for certificate")
-		flOrg                   = flag.String("organization", "scep-client", "organization for cert")
+		flCName                 = flag.String("cn", "", "common name for certificate")
+		flOrg                   = flag.String("organization", "", "organization for cert")
 		flSubjectKeyId          = flag.String("subjectKeyId", "123456789abcdef", "subjectKeyId for the cms certificate")
 		flLoc                   = flag.String("locality", "", "locality for certificate")
 		flProvince              = flag.String("province", "", "province for certificate")
-		flOU                    = flag.String("ou", "MDM", "organizational unit for certificate")
-		flCountry               = flag.String("country", "US", "country code in certificate")
+		flOU                    = flag.String("ou", "", "organizational unit for certificate")
+		flCountry               = flag.String("country", "", "country code in certificate")
 
 		// in case of multiple certificate authorities, we need to figure out who the recipient of the encrypted
 		// data is.
