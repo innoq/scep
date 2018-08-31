@@ -145,7 +145,7 @@ func main() {
 			scepserver.ClientValidity(clientValidity),
 			scepserver.AllowRenewal(allowRenewal),
 			scepserver.WithLogger(logger),
-			scepserver.WithVersion(version),
+			scepserver.WithVersion(fmt.Sprintf("%s-%s",version, gitHash)),
 		}
 
 		svc, err = scepserver.NewService(depot, svcOptions...)
