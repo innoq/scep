@@ -40,7 +40,7 @@ type Service interface {
 	// Certificates type.
 	GetNextCACert(ctx context.Context) ([]byte, error)
 
-	GetVersion(ctx context.Context) (string, error)
+	GetVersion(ctx context.Context) ([]byte, error)
 }
 
 type service struct {
@@ -104,8 +104,8 @@ func (svc *service) GetCACert(ctx context.Context) ([]byte, int, error) {
 	}
 	return rawSignedData, len(svc.ca), err
 }
-func (svc *service) GetVersion(ctx context.Context) (string, error) {
-	return svc.version, nil
+func (svc *service) GetVersion(ctx context.Context) ([]byte, error) {
+	return []byte(svc.version), nil
 }
 func (svc *service) PKIOperation(ctx context.Context, data []byte) ([]byte, error) {
 	msg, err := scep.ParsePKIMessage(data, scep.WithLogger(svc.debugLogger))
