@@ -39,6 +39,8 @@ type Service interface {
 	// when the old one expires. The response format is a PKCS#7 Degenerate
 	// Certificates type.
 	GetNextCACert(ctx context.Context) ([]byte, error)
+
+	GetVersion(ctx context.Context) (string, error)
 }
 
 type service struct {
@@ -54,7 +56,7 @@ type service struct {
 	cmsVerifier             cmsverifier.CMSVerifier
 	allowRenewal            int // days before expiry, 0 to disable
 	clientValidity          int // client cert validity in days
-
+	version                 string
 	/// info logging is implemented in the service middleware layer.
 	debugLogger log.Logger
 }
@@ -67,7 +69,12 @@ func (svc *service) SCEPChallenge() (string, error) {
 
 	return svc.dynamicChallengeStore.SCEPChallenge()
 }
-
+func WithVersion(version string) (ServiceOption) {
+	return func(s *service) error {
+		s.version = version
+		return nil
+	}
+}
 func (svc *service) GetCACaps(ctx context.Context) ([]byte, error) {
 	defaultCaps := []byte("SHA-1\nSHA-256\nAES\nDES3\nSCEPStandard\nPOSTPKIOperation")
 	return defaultCaps, nil
@@ -97,7 +104,9 @@ func (svc *service) GetCACert(ctx context.Context) ([]byte, int, error) {
 	}
 	return rawSignedData, len(svc.ca), err
 }
-
+func (svc *service) GetVersion(ctx context.Context) (string, error) {
+	return svc.version, nil
+}
 func (svc *service) PKIOperation(ctx context.Context, data []byte) ([]byte, error) {
 	msg, err := scep.ParsePKIMessage(data, scep.WithLogger(svc.debugLogger))
 	if err != nil {

@@ -143,6 +143,8 @@ func MakeSCEPEndpoint(svc Service) endpoint.Endpoint {
 			resp.Data, resp.CACertNum, resp.Err = svc.GetCACert(ctx)
 		case "PKIOperation":
 			resp.Data, resp.Err = svc.PKIOperation(ctx, req.Message)
+		case "version":
+			return svc.GetVersion()
 		default:
 			return nil, errors.New("operation not implemented")
 		}
