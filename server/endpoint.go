@@ -20,6 +20,7 @@ const (
 	getCACert     = "GetCACert"
 	pkiOperation  = "PKIOperation"
 	getNextCACert = "GetNextCACert"
+	version = "Version"
 )
 
 type Endpoints struct {
@@ -86,6 +87,16 @@ func (e *Endpoints) PKIOperation(ctx context.Context, msg []byte) ([]byte, error
 
 func (e *Endpoints) GetNextCACert(ctx context.Context) ([]byte, error) {
 	var request SCEPRequest
+	response, err := e.GetEndpoint(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	resp := response.(SCEPResponse)
+	return resp.Data, resp.Err
+}
+
+func (e *Endpoints) GetVersion(ctx context.Context) ([]byte, error)  {
+	request := SCEPRequest{Operation: version}
 	response, err := e.GetEndpoint(ctx, request)
 	if err != nil {
 		return nil, err
